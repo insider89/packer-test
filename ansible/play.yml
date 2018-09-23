@@ -1,0 +1,49 @@
+- hosts: all
+  become: yes
+  #Put required packages to install here
+  vars:
+    packages: 
+      - openssh 
+      - openssh-clients
+      - openssh-server 
+      - libssh2
+      - iptables
+      - iptables-services
+    #Service which you need to check put here
+    services:
+      - sshd
+      - iptables
+  tasks:
+        #Update system, before install packages
+        - name: upgrade all packages
+          yum:
+            name: '*'
+            state: latest
+          
+        - name: install the latest version of packages
+          yum:
+            name: "{{ item }}"
+            state: installed
+          with_items:
+            "{{ packages}}"
+          
+        - name: Ensure sshd and iptables services enabled and running
+          service:
+            name: "{{ item }}"
+            state: started
+            enabled: yes
+          with_items:
+            "{{ services}}"
+          
+        # Allow ssh access on port 22
+        - iptables:
+            chain: INPUT
+            protocol: tcp
+            destination_port: 22
+            jump: ACCEPT
+            comment: Accept new SSH connections.
+        
+        # Set the policy for the INPUT chain to DROP
+        - iptables:
+            chain: INPUT
+            policy: DROP
